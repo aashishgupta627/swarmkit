@@ -1,0 +1,47 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "swarm/heal-ledger.schema.json",
+  "title": "Swarm heal ledger",
+  "description": "One file per task at .swarm/heal/<task>.json. Written only by the control script, overwritten whole. Holds signatures and shas, never prose. Reserved: nothing writes it until the heal loop is switched on.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "task", "cycles"],
+  "properties": {
+    "schema": { "const": 1 },
+    "task": { "type": "string", "minLength": 1 },
+    "cycles": { "type": "array", "maxItems": 10, "items": { "$ref": "#/definitions/cycle" } }
+  },
+  "definitions": {
+    "cycle": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["n", "review_round", "pre_head", "post_head", "guard", "decision", "findings"],
+      "properties": {
+        "n": { "type": "integer", "minimum": 1 },
+        "review_round": { "type": "integer", "minimum": 1 },
+        "pre_head": { "type": "string", "pattern": "^[0-9a-f]{7,40}$" },
+        "post_head": { "type": ["string", "null"], "pattern": "^[0-9a-f]{7,40}$" },
+        "guard": { "enum": ["pass", "fail", "not_run"] },
+        "decision": {
+          "enum": ["continue", "done", "no_progress", "oscillation", "regression", "budget_exhausted", "escalate"]
+        },
+        "findings": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["signature", "class", "severity", "outcome"],
+            "properties": {
+              "signature": { "type": "string", "minLength": 8, "maxLength": 120 },
+              "class": {
+                "enum": ["code_defect", "test_defect", "env_or_dependency", "flaky", "spec_ambiguity", "architectural"]
+              },
+              "severity": { "enum": ["BLOCKER", "HIGH", "MEDIUM", "LOW"] },
+              "outcome": { "enum": ["open", "fixed", "rejected", "still_open", "regressed", "escalated"] }
+            }
+          }
+        }
+      }
+    }
+  }
+}

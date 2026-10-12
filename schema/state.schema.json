@@ -1,0 +1,188 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://swarmkit.local/schema/state.schema.json",
+  "title": "Swarm task state v2",
+  "description": "Lean, machine-readable task state. Hard size budget: 4 KB. Narrative detail lives in .swarm/logs/<task>/, never here. Every maxLength below is a token-control mechanism, not a style preference.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "task",
+    "status",
+    "stage",
+    "head",
+    "plan_dir",
+    "done",
+    "remaining",
+    "blockers",
+    "events",
+    "baseline",
+    "env",
+    "lock"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": 2,
+      "description": "Reject any state file without this. v1 files (46 KB prose history) are not resumable; run swarm.ps1 migrate."
+    },
+    "task": { "type": "string", "minLength": 1, "maxLength": 64 },
+    "status": {
+      "enum": [
+        "PENDING",
+        "PLANNING",
+        "AWAITING_APPROVAL",
+        "IMPLEMENTING",
+        "QA_REVIEW",
+        "FIX",
+        "FINAL_VALIDATION",
+        "COMPLETED",
+        "BLOCKED"
+      ]
+    },
+    "stage": {
+      "type": "string",
+      "maxLength": 100,
+      "description": "One short line, e.g. 'Phase 7 of 9'. Not a sentence, not a paragraph."
+    },
+    "head": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{7,40}$",
+      "description": "HEAD sha at the last verified transition. Authoritative resume anchor."
+    },
+    "plan_dir": {
+      "type": "string",
+      "description": "Directory holding 00-plan.md and the phase files, e.g. .swarm/plans/<task>."
+    },
+    "artifacts": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "task": { "type": "string" },
+        "plan": { "type": "string" },
+        "review": { "type": "string" }
+      }
+    },
+    "done": {
+      "type": "array",
+      "maxItems": 40,
+      "description": "Completed work units. The only resume-critical array. Keep it complete; this replaces re-reading git log to reconstruct progress.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "commit"],
+        "properties": {
+          "id": { "type": "string", "maxLength": 40, "description": "Phase id, e.g. 'P7' or 'FIX-2'." },
+          "commit": { "type": "string", "pattern": "^[0-9a-f]{7,40}$" },
+          "tests": { "type": "string", "maxLength": 40, "description": "Compact counts, e.g. '17/0/0/0' = run/fail/error/skip." },
+          "log": { "type": "string", "maxLength": 120, "description": "Path to the narrative log. Never read during resume." }
+        }
+      }
+    },
+    "remaining": {
+      "type": "array",
+      "maxItems": 40,
+      "description": "Ordered work units still to do. This array IS the builder prompt. One line each.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "phase_file"],
+        "properties": {
+          "id": { "type": "string", "maxLength": 40 },
+          "phase_file": {
+            "type": "string",
+            "maxLength": 120,
+            "description": "File the builder must read. This is how plan splitting pays off: only this file is read, not the whole plan."
+          },
+          "gate": { "type": "string", "maxLength": 200, "description": "Exit gate, one line. Required before the unit can be marked done." }
+        }
+      }
+    },
+    "blockers": {
+      "type": "array",
+      "maxItems": 15,
+      "description": "Open items. One line each with an owner. Replaces the 3.5 KB builder_run_findings block that duplicated history.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "state"],
+        "properties": {
+          "id": { "type": "string", "maxLength": 40 },
+          "state": { "enum": ["OPEN", "BLOCKED", "RESOLVED", "WONTFIX"] },
+          "note": { "type": "string", "maxLength": 160 },
+          "owner": { "enum": ["user", "orchestrator", "builder", "external"] },
+          "resolved_by": { "type": "string", "maxLength": 40 }
+        }
+      }
+    },
+    "events": {
+      "type": "array",
+      "maxItems": 30,
+      "description": "Append-only transition log. maxItems + maxLength are the hard budget. When full, fold the oldest events into a log file and keep the last 10. Detail longer than maxLength goes to a log file and is referenced by path.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["at", "stage", "detail"],
+        "properties": {
+          "at": { "type": "string", "maxLength": 25 },
+          "stage": { "type": "string", "maxLength": 30 },
+          "detail": {
+            "type": "string",
+            "maxLength": 180,
+            "description": "HARD CAP. One line. If you need more, write .swarm/logs/<task>/<n>-<stage>.md and put the path here."
+          },
+          "log": { "type": "string", "maxLength": 120 }
+        }
+      }
+    },
+    "decisions": {
+      "type": "array",
+      "maxItems": 25,
+      "description": "Decisions the user made at HITL gates, with the reason. Stops plan revisions from growing the plan instead of the record growing here.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["at", "decision"],
+        "properties": {
+          "at": { "type": "string", "maxLength": 25 },
+          "decision": { "type": "string", "maxLength": 120 },
+          "reason": { "type": "string", "maxLength": 160 }
+        }
+      }
+    },
+    "baseline": {
+      "type": "object",
+      "description": "Measured ONCE. Re-measure only when a manifest/lockfile changes. Do not re-run a full build per phase.",
+      "additionalProperties": false,
+      "properties": {
+        "captured_at": { "type": "string", "maxLength": 25 },
+        "head": { "type": "string", "maxLength": 40 },
+        "build": { "type": "string", "maxLength": 60 },
+        "tests": { "type": "string", "maxLength": 40 },
+        "manifest": { "type": "string", "maxLength": 200, "description": "Hash/short-id of the manifest the baseline was taken against." },
+        "ref": { "type": "string", "maxLength": 120, "description": "Where the full baseline lives, e.g. .swarm/logs/<task>/00-baseline.md" }
+      }
+    },
+    "env": {
+      "type": "object",
+      "description": "Environment facts discovered once (tool paths, flags, disk constraints). Resolved here instead of re-discovered and re-briefed every dispatch.",
+      "additionalProperties": false,
+      "properties": {
+        "test_cmd": { "type": "string", "maxLength": 200 },
+        "build_cmd": { "type": "string", "maxLength": 200 },
+        "lint_cmd": { "type": "string", "maxLength": 200 },
+        "notes": { "type": "string", "maxLength": 200 }
+      }
+    },
+    "lock": {
+      "type": "object",
+      "description": "Single-writer lease. Enforced by .swarm/locks/<task>.lock, mirrored here so a stale state file is still detectable.",
+      "additionalProperties": false,
+      "required": ["holder", "since"],
+      "properties": {
+        "holder": { "type": "string", "maxLength": 60, "description": "Session id, e.g. 'orch-<pid>-<epoch>'. Empty string means unheld." },
+        "since": { "type": "string", "maxLength": 25 },
+        "pid": { "type": ["integer", "null"] }
+      }
+    }
+  }
+}

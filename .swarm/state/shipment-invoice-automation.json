@@ -1,0 +1,48 @@
+{
+  "schema_version": 2,
+  "task": "shipment-invoice-automation",
+  "status": "IMPLEMENTING",
+  "stage": "implementing",
+  "head": "d7b3dc8",
+  "plan_dir": "swarmkit/.swarm/plans/shipment-invoice-automation",
+  "artifacts": {
+    "task": "swarmkit/.swarm/tasks/shipment-invoice-automation.md",
+    "plan": "swarmkit/.swarm/plans/shipment-invoice-automation/00-plan.md",
+    "review": "swarmkit/.swarm/reviews/shipment-invoice-automation.md"
+  },
+  "done": [
+    {"id": "P0", "commit": "48c1ef3", "tests": 0, "log": "swarmkit/.swarm/logs/shipment-invoice-automation/000-baseline.md"},
+    {"id": "P1", "commit": "777ca0d", "tests": 5, "log": "swarmkit/.swarm/logs/shipment-invoice-automation/001-harness.md"},
+    {"id": "P2", "commit": "e1406c5", "tests": 16, "log": ""},
+    {"id": "P3", "commit": "00f636b", "tests": 16, "log": ""},
+    {"id": "P4", "commit": "b4e7a2e", "tests": 7, "log": ""},
+    {"id": "P5", "commit": "9347b4a", "tests": 11, "log": ""},
+    {"id": "P6", "commit": "5f5717f", "tests": 9, "log": ""},
+    {"id": "P7", "commit": "1734f16", "tests": 10, "log": ""},
+    {"id": "P8", "commit": "ac486f4", "tests": 19, "log": ""},
+    {"id": "P9", "commit": "da52aee", "tests": 11, "log": ""},
+    {"id": "P10", "commit": "9ab2883", "tests": 4, "log": ""},
+    {"id": "P11", "commit": "106ed43", "tests": 106, "log": "swarmkit/.swarm/logs/shipment-invoice-automation/011-acceptance.md"}
+  ],
+  "remaining": [
+    {"id": "P12", "phase_file": "swarmkit/.swarm/plans/shipment-invoice-automation/12-internal-api-key.md", "gate": "service.test.ts green (header asserted); build:web 0; eslint 0 on touched; tsc <= 136"}
+  ],
+  "blockers": [
+    {"id": "B1", "state": "open", "note": "Live E2E (AC7-AC14) not executable: no authenticated session available.", "owner": "user", "resolved_by": ""}
+  ],
+  "events": [
+    {"at": "2026-10-10T11:30:00Z", "stage": "P11-DONE", "detail": "Acceptance 106ed43: suite 106/106; build 0; tsc 136; eslint 0. Blocker B1: live E2E not executable."},
+    {"at": "2026-10-10T12:15:00Z", "stage": "FIX-1", "detail": "QA round1: 3 MEDIUM. 2c606d0 wires 409 refresh in 6 row-mutation paths (suite 108/108); 3ff6947 records P8 dist deviation. B1 stays open."},
+    {"at": "2026-10-10T12:45:00Z", "stage": "QA-2", "detail": "Re-review APPROVED WITH NOTES: F-001/F-002 resolved; F-003 env limitation (backend 401, no session). 0 BLOCKER/HIGH."},
+    {"at": "2026-10-10T12:50:00Z", "stage": "COMPLETED", "detail": "Task finalized: 12 phases + 1 fix round; suite 108/108; build 0; tsc 136; eslint 0. Blocker B1 open (live E2E)."},
+    {"at": "2026-10-10T13:15:00Z", "stage": "REOPEN", "detail": "Reopened for P12: add x-internal-api-key to processDocument from gitignored .env.local (GATE2-APIKEY)."}
+  ],
+  "decisions": [
+    {"at": "2026-10-09T07:25:00Z", "gate": "GATE1-R1", "note": "User changes: poll 15s; reuse modals/upload/picker; fix handleApiError codes; fewer screens; context+service arch; verify presign body.", "owner": "user", "resolved_by": "plan revision"},
+    {"at": "2026-10-09T07:35:00Z", "gate": "GATE1-R2", "note": "Approved. Entry open to all now (dedicated perm later); sidebar: new group 'Invoice Automation'; uploadedBy=individualId/role; home card P10.", "owner": "user", "resolved_by": "plan revision r4"},
+    {"at": "2026-10-10T13:15:00Z", "gate": "GATE2-APIKEY", "note": "Local testing: backend InternalApiKeyFilter rejects /api/v1/documents/process. Key from gitignored .env.local (never committed); header x-internal-api-key only on processDocument; value Dev-X-Internal-Api-Key.", "owner": "user", "resolved_by": "P12"}
+  ],
+  "baseline": {},
+  "env": {},
+  "lock": {"holder": "orch-7852-1791637870", "since": "2026-10-10T13:11:10Z", "pid": 7852}
+}

@@ -1,0 +1,72 @@
+{
+  "schema": 1,
+  "task": "shipment-invoice-automation",
+  "review_round": 2,
+  "head": "d7b3dc8",
+  "verdict": "APPROVED WITH NOTES",
+  "counts": {
+    "BLOCKER": 0,
+    "HIGH": 0,
+    "MEDIUM": 1,
+    "LOW": 0
+  },
+  "findings": [
+    {
+      "id": "F-003",
+      "severity": "MEDIUM",
+      "class": "env_or_dependency",
+      "signature": "e2e:live-backend-journey:not-executable",
+      "title": "Live E2E (AC7-AC14) not executable: no authenticated session (recorded limitation, not a code defect)",
+      "location": {
+        "file": "swarmkit/.swarm/state/shipment-invoice-automation.json"
+      },
+      "evidence": {
+        "cmd": null,
+        "exit_code": null,
+        "excerpt": "Backend reachable: curl -k https://localhost:9002/actuator/health -> 200 {\"status\":\"UP\",mongo UP}; but GET https://localhost:9002/api/v1/automations/shipment-invoice -> 401 and POST /api/v1/auth/login -> 401. No OTP/SMS login, test user, token or JWKS fixture is available, so the authenticated journey cannot be driven over the real transport. Recorded as blocker B1; P11 exit gate permits deviations recorded as blockers. No fixer action possible until a session is provisioned."
+      },
+      "phase": "P11",
+      "acs": ["AC7", "AC8", "AC9", "AC10", "AC11", "AC12", "AC13", "AC14"],
+      "suggested_fix": "Provision a local test user/token and run the P11 acceptance checklist against the backend, recording per-AC results. Environmental only: no code change is implied and no fixer loop is expected for this item."
+    }
+  ],
+  "suggestions": [
+    {
+      "title": "getAudit service return type does not match the documented {requestId, events} envelope",
+      "location": {
+        "file": "src/services/shipmentInvoiceService.ts",
+        "line": 123
+      },
+      "note": "getAudit is typed Promise<AuditEvent[]> but the task (3.7) documents {requestId, events:[...]}; the context normalizes at runtime via 'as unknown' (ShipmentInvoiceContext.tsx:319-325). Type the service return as the envelope and normalize inside the service, mirroring normaliseOutputDocument."
+    },
+    {
+      "title": "retryGenerate surfaces a 409 code but does not refresh the review",
+      "location": {
+        "file": "src/context/ShipmentInvoiceContext.tsx",
+        "line": 795
+      },
+      "note": "Unlike approve/reparse and the six row mutations, retryGenerate's catch stores readErrorCode(err) but never refetches. It runs from the failed step where no review grid is mounted, so impact is low; consider a refresh for consistency with the AC14 rule."
+    },
+    {
+      "title": "Superseded dist bundles remain tracked after a rebuild",
+      "location": {
+        "file": "dist/"
+      },
+      "note": "Each building commit adds its new bundle but leaves the prior one tracked (e.g. app.dbca767 stays tracked after 2c606d0 repointed index.html to app.830cd859). Matches the P4-P10 pattern and is pre-existing churn; a future cleanup could stage the deletions."
+    }
+  ],
+  "prior_findings": [
+    {
+      "signature": "review:ShipmentInvoiceContext.tsx:409-refresh-not-wired",
+      "status": "resolved"
+    },
+    {
+      "signature": "contract:dist:P8-commit-missing-rebuilt-bundle",
+      "status": "resolved"
+    },
+    {
+      "signature": "e2e:live-backend-journey:not-executable",
+      "status": "still_open"
+    }
+  ]
+}

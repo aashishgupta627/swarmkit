@@ -1,0 +1,107 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "swarm/findings.schema.json",
+  "title": "Swarm QA findings file",
+  "description": "Written by qa-reviewer to .swarm/reviews/<task>.findings.json. Defects only in findings[]; suggestions are never routed.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "task", "review_round", "head", "verdict", "counts", "findings", "suggestions", "prior_findings"],
+  "properties": {
+    "schema": { "const": 1 },
+    "task": { "type": "string", "minLength": 1 },
+    "review_round": { "type": "integer", "minimum": 1 },
+    "head": { "type": "string", "pattern": "^[0-9a-f]{7,40}$" },
+    "verdict": { "enum": ["APPROVED", "APPROVED WITH NOTES", "CHANGES_REQUIRED", "BLOCKED"] },
+    "counts": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["BLOCKER", "HIGH", "MEDIUM", "LOW"],
+      "properties": {
+        "BLOCKER": { "type": "integer", "minimum": 0 },
+        "HIGH": { "type": "integer", "minimum": 0 },
+        "MEDIUM": { "type": "integer", "minimum": 0 },
+        "LOW": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "findings": { "type": "array", "items": { "$ref": "#/definitions/finding" } },
+    "suggestions": { "type": "array", "items": { "$ref": "#/definitions/suggestion" } },
+    "prior_findings": { "type": "array", "items": { "$ref": "#/definitions/prior" } }
+  },
+  "definitions": {
+    "severity": { "enum": ["BLOCKER", "HIGH", "MEDIUM", "LOW"] },
+    "class": {
+      "enum": ["code_defect", "test_defect", "env_or_dependency", "flaky", "spec_ambiguity", "architectural"]
+    },
+    "location": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["file"],
+      "properties": {
+        "file": { "type": "string", "minLength": 1 },
+        "line": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "finding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "severity", "class", "signature", "title", "location", "evidence", "phase", "suggested_fix"],
+      "properties": {
+        "id": { "type": "string", "pattern": "^F-[0-9]{3}$" },
+        "severity": { "$ref": "#/definitions/severity" },
+        "class": { "$ref": "#/definitions/class" },
+        "signature": {
+          "type": "string",
+          "minLength": 8,
+          "maxLength": 120,
+          "pattern": "^(build|lint|type|test|e2e|contract|security|review):.+:.+$"
+        },
+        "title": { "type": "string", "minLength": 1, "maxLength": 120 },
+        "location": { "$ref": "#/definitions/location" },
+        "evidence": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["cmd", "exit_code", "excerpt"],
+          "properties": {
+            "cmd": { "type": ["string", "null"] },
+            "exit_code": { "type": ["integer", "null"] },
+            "excerpt": { "type": "string", "maxLength": 600 }
+          }
+        },
+        "phase": { "type": "string", "minLength": 1, "maxLength": 16 },
+        "acs": { "type": "array", "items": { "type": "string" } },
+        "repro": { "type": "string", "maxLength": 300 },
+        "suggested_fix": { "type": "string", "minLength": 1, "maxLength": 400 },
+        "flaky_check": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["reruns", "results"],
+          "properties": {
+            "reruns": { "type": "integer", "minimum": 1 },
+            "results": { "type": "array", "items": { "enum": ["pass", "fail"] }, "minItems": 2 }
+          }
+        }
+      },
+      "if": { "properties": { "class": { "const": "flaky" } }, "required": ["class"] },
+      "then": { "required": ["flaky_check"] }
+    },
+    "suggestion": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["title", "location"],
+      "properties": {
+        "title": { "type": "string", "minLength": 1, "maxLength": 120 },
+        "location": { "$ref": "#/definitions/location" },
+        "note": { "type": "string", "maxLength": 300 }
+      }
+    },
+    "prior": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["signature", "status"],
+      "properties": {
+        "signature": { "type": "string", "minLength": 8, "maxLength": 120 },
+        "status": { "enum": ["resolved", "still_open"] }
+      }
+    }
+  }
+}

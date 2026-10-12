@@ -1,0 +1,43 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://swarmkit.local/schema/evidence.schema.json",
+  "title": "Swarm evidence block v2",
+  "description": "The fixed-format footer every subagent must end with. The orchestrator verifies against this instead of re-running the subagent's greps. One line per field, nothing else.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["unit", "status", "files", "checks"],
+  "properties": {
+    "unit": { "type": "string", "maxLength": 40, "description": "Work unit id, matching state.done/remaining, e.g. 'P7'." },
+    "status": { "enum": ["DONE", "PARTIAL", "BLOCKED", "STOPPED"] },
+    "commit": { "type": "string", "maxLength": 40, "description": "Commit sha of the unit's work. Empty if PARTIAL/BLOCKED with nothing committed." },
+    "files": {
+      "type": "array",
+      "maxItems": 30,
+      "description": "Paths created or modified. Verify with: git show --stat <commit>",
+      "items": { "type": "string", "maxLength": 120 }
+    },
+    "checks": {
+      "type": "array",
+      "maxItems": 10,
+      "description": "Commands actually executed, with observed outcome. NEVER list a command you did not run.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["cmd", "result"],
+        "properties": {
+          "cmd": { "type": "string", "maxLength": 160 },
+          "result": { "type": "string", "maxLength": 80, "description": "e.g. 'BUILD SUCCESS 1:44' or '78 run / 0 fail / 0 err / 6 skip' or 'exit 128'." },
+          "counts": { "type": "string", "maxLength": 40, "description": "run/fail/error/skip when the command is a test run." }
+        }
+      }
+    },
+    "gate_met": { "type": "boolean", "description": "Did the unit's exit gate pass? False means do not mark done." },
+    "unverified": {
+      "type": "array",
+      "maxItems": 10,
+      "description": "Anything asserted without direct observation. Must be non-empty rather than quietly assumed.",
+      "items": { "type": "string", "maxLength": 160 }
+    },
+    "next": { "type": "string", "maxLength": 160, "description": "The single next action. One line." }
+  }
+}
